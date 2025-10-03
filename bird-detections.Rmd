@@ -106,3 +106,36 @@ combined.detections <- combined.detections %>%
 sum(is.na(combined.detections)) # check for NAs
 ```
 
+## Bird Detections 
+
+```{r summary detections}
+summary.detections <- combined.detections %>% 
+  summarise(
+  median = median(total_individuals),
+  mean = mean(total_individuals), 
+  min = min(total_individuals), 
+  max = max(total_individuals))
+kable(summary.detections, caption = "A summary kable dispaying the median, mean, minimum, and maximum number of detections at surveys.", digits = c(0, 2, 0, 0))
+```
+
+Will probably have some outliers. 
+
+```{r global model}
+glm.global <- glm(total_individuals ~ litter_avg + veg_ht_avg + vd_vo + pc_grass + site_ha + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+summary(glm.global) 
+```
+
+```{r global model performance, fig.width=10, fig.height=8, fig.align='center'}
+library(easystats)
+check_model(glm.global) 
+```
+
+```{r correlation, message=FALSE, fig.align='center', warning=FALSE}
+library(GGally)
+ggpairs(combined.detections, columns = c(2, 3, 4, 5, 6, 8)) + theme_bw()
+```
+
+Vegetation height and vegetation density appear to be correlated. Need to be careful of that in the models. 
+
+
+
