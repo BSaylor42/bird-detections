@@ -1,0 +1,101 @@
+---
+title: "Bird Detections"
+author: "Brianna Saylor"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr) # data manipulation
+library(ggplot2) # making graphs
+library(tidyverse)  # importing, tidying, plotting data
+library(knitr)      # making tables in markdown
+library(leaflet)    # making maps in markdown 
+library(hexbin)
+library(tidyr) # data manipulation 
+library(lubridate) # used to change date format
+library(lme4) # running mixed models 
+obs <- read.csv("data/grassland-bird-species-obs_09July25.csv")
+veg <- read.csv("data/grassland-bird-veg_09July25.csv")
+point.count <- read.csv("data/grassland-bird-point-count_18Sept25.csv")
+```
+
+```{r clean observation data, echo=FALSE, include=FALSE}
+# check data for issues 
+summary(obs)
+obs$point_id <- as.factor(obs$point_id) # point id factor
+obs$species <- as.factor(obs$species) # species factor 
+obs$flyover <- as.factor(obs$flyover) # flyover factor 
+unique(obs$point_id)
+summary(obs)
+```
+
+```{r clean up vegetation data, echo=FALSE, include=FALSE}
+summary(veg)
+veg$point_id <- as.factor(veg$point_id) # point id factor 
+unique(veg$point_id)
+summary(veg)
+```
+
+```{r clean up point count data, echo=FALSE, include=FALSE}
+summary(point.count)
+point.count$point_id <- as.factor(point.count$point_id) # point id as factor
+point.count <- point.count %>% 
+  mutate(date = dmy(date)) # change date format to year-month-day
+summary(point.count)
+```
+
+```{r filtering observation data, include=FALSE}
+obs.nofly.100 <- filter(obs, flyover == "No") # remove observations that are flyovers
+obs.nofly.100 <- filter(obs.nofly.100, dist <= 100) # remove observations over 100 m from point
+```
+
+```{r summarize individuals by point id, include=FALSE}
+detections <- obs.nofly.100 %>% 
+  group_by(point_id) %>% 
+  summarise(total_individuals = sum(number))
+```
+
+```{r calculating time since sunrise, message=FALSE, include=FALSE}
+# calculating sunrise time in UTC, must have columns for date/lat/lon titled exactly that
+library(suncalc)
+sun.times <- getSunlightTimes(
+  data = point.count, 
+  keep = "sunrise")
+ # sun.times$sunrise <- format(sun.times$sunrise, format = "%H:%M:%S")
+point.count <- point.count %>% 
+  mutate(getSunlightTimes(
+    data = point.count,
+    keep = "sunrise"))
+# convert local times to proper format for conversion
+point.count <- point.count %>% 
+  mutate(
+    date_time = paste(date, start_time),
+    date_time = ymd_hm(date_time),
+    date_time = case_when(
+      zone == "central" ~ force_tz(date_time, "America/Chicago"),
+      zone == "eastern" ~ force_tz(date_time, "America/New_York")),
+    date_time_utc = with_tz(date_time, "UTC"))
+# calculate the minutes since sunrise 
+point.count <- point.count %>% 
+  mutate(min_from_sunrise = round(
+    as.numeric(difftime(date_time_utc, sunrise, units = "mins")),2))
+```
+
+```{r removing columns from point count data, echo=FALSE, include=FALSE} 
+point.count <- point.count %>% 
+  dplyr::select(-observer, -temp, -wind, -cloud, -start_time, -lat, -lon, -zone, -sunrise, -date_time, -date_time_utc, -date)
+```
+
+```{r preparing the veg data, echo=FALSE}
+veg <- veg %>% 
+  dplyr::select(-date, -basal_area, -site_type, -vd_max, -vd_avg, -pc_woody, -pc_forb, -pc_bramble, -pc_noveg, -pc_litter, -pc_bare, -site_pa_ratio)
+veg <- veg %>%
+  mutate(site_id = sub("^[0-9]+-", "", point_id)) # add a column for site id based off point id 
+```
+
