@@ -92,10 +92,17 @@ point.count <- point.count %>%
   dplyr::select(-observer, -temp, -wind, -cloud, -start_time, -lat, -lon, -zone, -sunrise, -date_time, -date_time_utc, -date)
 ```
 
-```{r preparing the veg data, echo=FALSE}
+```{r preparing the veg data, echo=FALSE, include=FALSE}
 veg <- veg %>% 
   dplyr::select(-date, -basal_area, -site_type, -vd_max, -vd_avg, -pc_woody, -pc_forb, -pc_bramble, -pc_noveg, -pc_litter, -pc_bare, -site_pa_ratio)
-veg <- veg %>%
-  mutate(site_id = sub("^[0-9]+-", "", point_id)) # add a column for site id based off point id 
+```
+
+```{r combining into one df, include=FALSE}
+combined.detections <- veg %>% 
+  full_join(detections, by = "point_id") %>% 
+  full_join(point.count, by = "point_id")
+combined.detections <- combined.detections %>% 
+  mutate(across(c(total_individuals), ~replace_na(.x, 0))) # replace NA values with 0
+sum(is.na(combined.detections)) # check for NAs
 ```
 
