@@ -4,7 +4,7 @@ author: "Brianna Saylor"
 date: "`r Sys.Date()`"
 output: 
   html_document:
-    toc: TRUE
+    toc: FALSE
     toc_float: TRUE
 wrap: sentence
 ---
@@ -108,7 +108,7 @@ combined.detections <- combined.detections %>%
 sum(is.na(combined.detections)) # check for NAs
 ```
 
-## Bird Detections 
+Point count surveys were completed across Tennessee looking for grassland birds. Surveyors examined which characteristics impacted the total number of birds detected at point counts. They measured environmental characteristics including litter depth, vegetation height, vegetation density, and percent cover of grass. Additionally, they measured the size of the site in ha and the start time of the survey (minutes after sunrise). 
 
 ```{r summary detections}
 summary.detections <- combined.detections %>% 
@@ -120,17 +120,19 @@ summary.detections <- combined.detections %>%
 kable(summary.detections, caption = "A summary kable dispaying the median, mean, minimum, and maximum number of detections at surveys.", digits = c(0, 2, 0, 0))
 ```
 
-Will probably have some outliers. 
+Will probably have some outliers in the data. Need to keep on eye out for this.  
 
 ```{r global model}
 glm.global <- glm(total_individuals ~ litter_avg + veg_ht_avg + vd_vo + pc_grass + site_ha + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
 summary(glm.global) 
 ```
 
-```{r global model performance, fig.width=10, fig.height=8, fig.align='center'}
+```{r global model performance, fig.width=10, fig.height=8, fig.align='center', warning=FALSE, message=FALSE}
 library(easystats)
 check_model(glm.global) 
 ```
+
+There are 2 outliers in the data which are much higher counts compared to the rest of the data. Let's remove those. 
 
 ```{r remove outliers, include=FALSE}
 combined.detections <- combined.detections[-c(50,98),]
@@ -142,17 +144,25 @@ summary(glm.global.2)
 check_model(glm.global.2) 
 ```
 
-Moderate dispersion. 
+We have a moderate amount of dispersion. 
 
-```{r correlation, message=FALSE, fig.align='center', warning=FALSE}
+```{r collinearity, message=FALSE, fig.align='center', warning=FALSE}
+# check for collinearity 
 library(GGally)
 ggpairs(combined.detections, columns = c(2, 3, 4, 5, 6, 8)) + theme_bw()
 ```
 
-Vegetation height and vegetation density appear to be correlated. Need to be careful of that in the models. 
+Vegetation height and vegetation density appear to be highly correlated. Need to be careful of that in the models. 
 
+```{r}
+# check for multicollinearity
+library(performance)
+performance::check_collinearity(glm.global.2)
+```
 
-```{r model list}
+VIF values are <5 so we do not need to worry about multicollinearity. 
+
+```{r model list, include=FALSE}
 m1 <- glm(total_individuals ~ veg_ht_avg + pc_grass, family = poisson(link = "log"), data = combined.detections)
 m2 <- glm(total_individuals ~ site_ha + pc_grass, family = poisson(link = "log"), data = combined.detections)
 m3 <- glm(total_individuals ~ site_ha + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
@@ -179,6 +189,7 @@ model_comparison
 # select best supported models 
 subset(model_comparison, delta <5)
 ```
+
 Model 5, 9, and 8 all have delta AICc <2. Model 5 is 2.34 times more likely than model 9. (0.508/0.217=2.34) The global model does have a delta AICc <5. 
 
 ```{r calculate variable importance weights}
@@ -186,3 +197,30 @@ Model 5, 9, and 8 all have delta AICc <2. Model 5 is 2.34 times more likely than
 MuMIn::sw(model_comparison)
 ```
 
+```{r model averageing}
+# model averaging 
+model.avg <- model.avg(model_comparison, revised.var = TRUE)
+model.avg
+```
+
+Now we can look at the direction of impact these variables have with the number of bird detections. 
+
+```{r report model average}
+summary(model.avg(model_comparison, subset = delta < 2))
+```
+
+```{r}
+# calculating the exponentiated coefficients of our averaged model
+exp(coef(model.avg))
+```
+
+We can expect the following relationships: 
+  -Minutes from sunrise: 0.2% decrease in bird detections for every minute after sunrise 
+  -Percent grass: 1.3% increase in bird detections per 1% increase in grass cover
+  -Vegetation density: 0.4% increase in bird detections with 1 unit increase in vegetation density
+  -Litter depth: 0.1% increase in bird detections with 1 cm increase in litter depth 
+  -Vegetation height: 0.3% increase in bird detections with every 1 cm increase in vegetation height 
+  -Site size: 0.02% decrease in bird detections with every 1 ha increase in site size
+
+      
+In conclusion, the factors that impact bird detections include survey start time, the percent cover of grass, and the vegetation density. To maximize detections surveys should be conducted closer to sunrise, in areas with large amounts of grass, and in areas with dense vegetation. 
