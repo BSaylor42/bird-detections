@@ -44,6 +44,7 @@ summary(veg)
 
 ```{r clean up point count data, echo=FALSE, include=FALSE}
 summary(point.count)
+names(point.count)[names(point.count) == "X...point_id"] <- "point_id"
 point.count$point_id <- as.factor(point.count$point_id) # point id as factor
 point.count <- point.count %>% 
   mutate(date = dmy(date)) # change date format to year-month-day
@@ -129,6 +130,18 @@ summary(glm.global)
 library(easystats)
 check_model(glm.global) 
 ```
+
+```{r remove outliers, include=FALSE}
+combined.detections <- combined.detections[-c(50,98),]
+glm.global.2 <- glm(total_individuals ~ litter_avg + veg_ht_avg + vd_vo + pc_grass + site_ha + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+summary(glm.global.2) 
+```
+
+```{r global model performance no outliers, fig.width=10, fig.height=8, fig.align='center'}
+check_model(glm.global.2) 
+```
+
+Moderate dispersion. 
 
 ```{r correlation, message=FALSE, fig.align='center', warning=FALSE}
 library(GGally)
