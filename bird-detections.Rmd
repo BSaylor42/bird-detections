@@ -20,6 +20,7 @@ library(hexbin)
 library(tidyr) # data manipulation 
 library(lubridate) # used to change date format
 library(lme4) # running mixed models 
+library(MuMIn)
 obs <- read.csv("data/grassland-bird-species-obs_09July25.csv")
 veg <- read.csv("data/grassland-bird-veg_09July25.csv")
 point.count <- read.csv("data/grassland-bird-point-count_18Sept25.csv")
@@ -164,5 +165,24 @@ m9 <- glm(total_individuals ~ litter_avg + vd_vo + pc_grass + min_from_sunrise, 
 m10 <- glm(total_individuals ~ vd_vo + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
 m11 <- glm(total_individuals ~ pc_grass + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
 m12 <- glm(total_individuals ~ litter_avg + veg_ht_avg + vd_vo + pc_grass + site_ha + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+# place models in an object 
+models <- list(m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12)
+```
+
+```{r display model list}
+# display list of ranked models
+model_comparison <- model.sel(models)
+model_comparison
+```
+
+```{r best supported models}
+# select best supported models 
+subset(model_comparison, delta <5)
+```
+Model 5, 9, and 8 all have delta AICc <2. Model 5 is 2.34 times more likely than model 9. (0.508/0.217=2.34) The global model does have a delta AICc <5. 
+
+```{r calculate variable importance weights}
+# calculate variable importance weights 
+MuMIn::sw(model_comparison)
 ```
 
