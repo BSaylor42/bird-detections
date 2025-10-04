@@ -151,4 +151,18 @@ ggpairs(combined.detections, columns = c(2, 3, 4, 5, 6, 8)) + theme_bw()
 Vegetation height and vegetation density appear to be correlated. Need to be careful of that in the models. 
 
 
+```{r model list}
+m1 <- glm(total_individuals ~ veg_ht_avg + pc_grass, family = poisson(link = "log"), data = combined.detections)
+m2 <- glm(total_individuals ~ site_ha + pc_grass, family = poisson(link = "log"), data = combined.detections)
+m3 <- glm(total_individuals ~ site_ha + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+m4 <- glm(total_individuals ~ litter_avg + veg_ht_avg + pc_grass, family = poisson(link = "log"), data = combined.detections)
+m5 <- glm(total_individuals ~ vd_vo + pc_grass + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+m6 <- glm(total_individuals ~ pc_grass + site_ha + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+m7 <- glm(total_individuals ~ litter_avg + veg_ht_avg + pc_grass + site_ha, family = poisson(link = "log"), data = combined.detections)
+m8 <- glm(total_individuals ~ veg_ht_avg + pc_grass + site_ha + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+m9 <- glm(total_individuals ~ litter_avg + vd_vo + pc_grass + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+m10 <- glm(total_individuals ~ vd_vo + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+m11 <- glm(total_individuals ~ pc_grass + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+m12 <- glm(total_individuals ~ litter_avg + veg_ht_avg + vd_vo + pc_grass + site_ha + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
+```
 
