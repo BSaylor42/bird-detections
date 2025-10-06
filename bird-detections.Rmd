@@ -108,9 +108,11 @@ combined.detections <- combined.detections %>%
 sum(is.na(combined.detections)) # check for NAs
 ```
 
-Point count surveys were completed across Tennessee looking for grassland birds. Surveyors examined which characteristics impacted the total number of birds detected at point counts. They measured environmental characteristics including litter depth, vegetation height, vegetation density, and percent cover of grass. Additionally, they measured the size of the site in ha and the start time of the survey (minutes after sunrise). 
+Point count surveys were completed across Tennessee looking for grassland birds. Surveyors examined which characteristics impacted the total number of birds detected at point counts. They measured environmental characteristics including litter depth, vegetation height, vegetation density, and percent cover of grass. Additionally, they measured the size of the site in hectares and the start time of the survey (minutes after sunrise). 
 
-```{r summary detections}
+What does our data look like?
+
+```{r summary detections, echo=FALSE}
 summary.detections <- combined.detections %>% 
   summarise(
   median = median(total_individuals),
@@ -118,6 +120,14 @@ summary.detections <- combined.detections %>%
   min = min(total_individuals), 
   max = max(total_individuals))
 kable(summary.detections, caption = "A summary kable dispaying the median, mean, minimum, and maximum number of detections at surveys.", digits = c(0, 2, 0, 0))
+```
+
+```{r histogram detections all data, echo=FALSE, message=FALSE, fig.align='center'}
+ggplot(combined.detections, aes(x = total_individuals)) + 
+  geom_histogram() + 
+  theme_classic() + 
+  xlab("Number of Detections") + 
+  ylab("Count")
 ```
 
 Will probably have some outliers in the data. Need to keep on eye out for this.  
@@ -145,6 +155,16 @@ check_model(glm.global.2)
 ```
 
 We have a moderate amount of dispersion. 
+
+What does our data look like now that we have removed the outliers?
+```{r histogram detections no outliers, echo=FALSE, message=FALSE, fig.align='center'}
+ggplot(combined.detections, aes(x = total_individuals)) + 
+  geom_histogram(bins = 20) + 
+  theme_classic() + 
+  xlab("Number of Detections") + 
+  ylab("Count")
+```
+
 
 ```{r collinearity, message=FALSE, fig.align='center', warning=FALSE}
 # check for collinearity 
@@ -209,7 +229,7 @@ Now we can look at the direction of impact these variables have with the number 
 summary(model.avg(model_comparison, subset = delta < 2))
 ```
 
-```{r}
+```{r back transform coefficients}
 # calculating the exponentiated coefficients of our averaged model
 exp(coef(model.avg))
 ```
