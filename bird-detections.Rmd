@@ -11,6 +11,7 @@ wrap: sentence
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(width = 200) # increase page width for wide readouts
 library(dplyr) # data manipulation
 library(ggplot2) # making graphs
 library(tidyverse)  # importing, tidying, plotting data
@@ -110,6 +111,11 @@ sum(is.na(combined.detections)) # check for NAs
 
 Point count surveys were completed across Tennessee looking for grassland birds. Surveyors examined which characteristics impacted the total number of birds detected at point counts. They measured environmental characteristics including litter depth, vegetation height, vegetation density, and percent cover of grass. Additionally, they measured the size of the site in hectares and the start time of the survey (minutes after sunrise). 
 
+<center>
+<iframe src="https://macaulaylibrary.org/asset/643030692/embed" height="476" width="640" frameborder="0" allowfullscreen></iframe>
+</center>
+
+<br>
 What does our data look like?
 
 ```{r summary detections, echo=FALSE}
@@ -132,6 +138,8 @@ ggplot(combined.detections, aes(x = total_individuals)) +
 
 Will probably have some outliers in the data. Need to keep on eye out for this.  
 
+### **Global Model** 
+
 ```{r global model}
 glm.global <- glm(total_individuals ~ litter_avg + veg_ht_avg + vd_vo + pc_grass + site_ha + min_from_sunrise, family = poisson(link = "log"), data = combined.detections)
 summary(glm.global) 
@@ -141,8 +149,8 @@ summary(glm.global)
 library(easystats)
 check_model(glm.global) 
 ```
-
-There are 2 outliers in the data which are much higher counts compared to the rest of the data. Let's remove those. 
+<br>
+There are 2 outliers in the data which are much higher counts compared to the rest of the dataset. Those outliers are caused by large flocks of migrating shorebirds. Let's remove those two points since we are targeting species that breed in TN.  
 
 ```{r remove outliers, include=FALSE}
 combined.detections <- combined.detections[-c(50,98),]
@@ -150,13 +158,8 @@ glm.global.2 <- glm(total_individuals ~ litter_avg + veg_ht_avg + vd_vo + pc_gra
 summary(glm.global.2) 
 ```
 
-```{r global model performance no outliers, fig.width=10, fig.height=8, fig.align='center'}
-check_model(glm.global.2) 
-```
-
-We have a moderate amount of dispersion. 
-
 What does our data look like now that we have removed the outliers?
+
 ```{r histogram detections no outliers, echo=FALSE, message=FALSE, fig.align='center'}
 ggplot(combined.detections, aes(x = total_individuals)) + 
   geom_histogram(bins = 20) + 
@@ -165,6 +168,13 @@ ggplot(combined.detections, aes(x = total_individuals)) +
   ylab("Count")
 ```
 
+```{r global model performance no outliers, fig.width=10, fig.height=8, fig.align='center'}
+check_model(glm.global.2) 
+```
+
+We have a moderate amount of dispersion. 
+
+### **Check for Collinearity**
 
 ```{r collinearity, message=FALSE, fig.align='center', warning=FALSE}
 # check for collinearity 
@@ -181,6 +191,8 @@ performance::check_collinearity(glm.global.2)
 ```
 
 VIF values are <5 so we do not need to worry about multicollinearity. 
+
+### **Model Selection**
 
 ```{r model list, include=FALSE}
 m1 <- glm(total_individuals ~ veg_ht_avg + pc_grass, family = poisson(link = "log"), data = combined.detections)
@@ -244,3 +256,23 @@ We can expect the following relationships:
 
       
 In conclusion, the factors that impact bird detections include survey start time, the percent cover of grass, and the vegetation density. To maximize detections surveys should be conducted closer to sunrise, in areas with large amounts of grass, and in areas with dense vegetation. 
+
+```{r graph linear model top predictors, echo=FALSE, fig.width=10, fig.height=5, fig.align='center', message=FALSE}
+p1 <- ggplot(combined.detections, aes(x = min_from_sunrise, y = total_individuals)) +
+  geom_point() +
+  geom_smooth(method="glm", method.args=list(family="poisson"(link="log"))) +
+  xlab("Minutes from Sunrise") + ylab("Total Number of Detections") + 
+  theme_classic()
+p2 <- ggplot(combined.detections, aes(x = pc_grass, y = total_individuals)) +
+  geom_point() +
+  geom_smooth(method="glm", method.args=list(family="poisson"(link="log"))) +
+  xlab("Percent Grass") + ylab("Total Number of Detections") +
+  theme_classic()
+p3 <- ggplot(combined.detections, aes(x = vd_vo, y = total_individuals)) +
+  geom_point() +
+  geom_smooth(method="glm", method.args=list(family="poisson"(link="log"))) +
+  xlab("Vegetation Density") + ylab("Total Number of Detections") + 
+  theme_classic()
+
+p1 + p2 + p3
+```
